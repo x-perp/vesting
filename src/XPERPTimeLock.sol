@@ -22,8 +22,11 @@ contract XPERPTimeLock {
     uint256 private constant ENTERED = 1;
     uint256 private constant NOT_ENTERED = 0;
 
+    /// @notice xperp token contract
     IERC20 public xperpToken;
+    /// @notice team address
     address public teamAddress;
+    /// @notice unlock time, it is set to 12th November 2023 00:00:00 UTC
     uint256 public unlockTime;
     uint256 private reentrancyStatus;
 
@@ -31,16 +34,17 @@ contract XPERPTimeLock {
         xperpToken = _token;
         teamAddress = _teamAddress;
         // Set unlock time to 12th November 2023 00:00:00 UTC
-//        unlockTime = 1689408000;
-        unlockTime = block.timestamp + 1 hours;
+        unlockTime = 1699747200;
     }
 
+    /// @notice Deposit the xperp tokens to the contract, approve the xperp contract to spend the tokens on behalf of teamAddress before calling this function
     function deposit(uint256 _amount) external {
         require(msg.sender == teamAddress, "Only the team can deposit tokens");
         require(block.timestamp < unlockTime, "Tokens are unlocked");
         require(xperpToken.transferFrom(msg.sender, address(this), _amount), "Transfer failed");
     }
 
+    /// @notice Withdraw the xperp tokens from the contract
     function withdraw() external {
         if (reentrancyStatus == ENTERED)
             revert("ReentrancyGuard: reentrant call");
@@ -52,11 +56,13 @@ contract XPERPTimeLock {
         reentrancyStatus = NOT_ENTERED;
     }
 
+    /// @notice Recover the eth sent by mistake to the contract
     function recoverEth() external {
         require(msg.sender == teamAddress, "Only the team can recover eth");
         payable(teamAddress).transfer(address(this).balance);
     }
 
+    /// @notice Recover the erc20 tokens sent by mistake to the contract, xperp can't be recovered using this function
     function recoverERC20ExceptForXperp(address _tokenAddress, uint256 _amount) external {
         require(msg.sender == teamAddress, "Only the team can recover tokens sent by mistake");
         require(_tokenAddress != address(xperpToken), "Cannot recover the token which is locked");
